@@ -1,0 +1,109 @@
+-- [[ ZB HELPER FOR DELTA X - MOBILE ]] --
+
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+-- ลบ UI เก่า (ถ้ามี)
+if game.CoreGui:FindFirstChild("DeltaZB") then
+    game.CoreGui.DeltaZB:Destroy()
+end
+
+-- สร้างหน้าต่างเมนูแบบ Simple (เหมาะกับมือถือ)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DeltaZB"
+ScreenGui.Parent = game.CoreGui
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 160, 0, 200)
+Main.Position = UDim2.new(0.05, 0, 0.3, 0)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Main.BackgroundTransparency = 0.2
+Main.Active = true
+Main.Draggable = true
+Main.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner", Main)
+Corner.CornerRadius = UDim.new(0, 12)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "DELTA ZB V5"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.Parent = Main
+
+-- [[ ฟังก์ชันสร้างปุ่ม ]] --
+local function MakeBtn(text, yPos, color, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Position = UDim2.new(0.05, 0, 0, yPos)
+    btn.Text = text
+    btn.BackgroundColor3 = color
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.Parent = Main
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+-- 1. ระบบ Auto Click Green
+_G.AutoG = false
+local gBtn = MakeBtn("Auto Green: OFF", 40, Color3.fromRGB(60, 60, 60), function()
+    _G.AutoG = not _G.AutoG
+end)
+
+task.spawn(function()
+    while true do
+        if _G.AutoG then
+            gBtn.Text = "Auto Green: ON ✅"
+            gBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("ClickDetector") then
+                    local name = v.Parent.Name:lower()
+                    if name:find("green") or name:find("accept") or name:find("allow") then
+                        fireclickdetector(v)
+                    end
+                end
+            end
+        else
+            gBtn.Text = "Auto Green: OFF"
+            gBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        end
+        task.wait(0.3)
+    end
+end)
+
+-- 2. ระบบ ESP มองทะลุ
+local espOn = false
+MakeBtn("ESP (มองคน)", 80, Color3.fromRGB(100, 0, 200), function()
+    espOn = not espOn
+    if espOn then
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= player and p.Character then
+                local h = Instance.new("Highlight", p.Character)
+                h.FillColor = Color3.fromRGB(255, 0, 0)
+                h.Name = "DeltaESP"
+            end
+        end
+    else
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("DeltaESP") then
+                p.Character.DeltaESP:Destroy()
+            end
+        end
+    end
+end)
+
+-- 3. ระบบความเร็ว (Speed)
+MakeBtn("Speed (60)", 120, Color3.fromRGB(0, 100, 200), function()
+    player.Character.Humanoid.WalkSpeed = 60
+end)
+
+-- 4. ปุ่มปิดเมนู
+MakeBtn("ปิดเมนู (Close UI)", 160, Color3.fromRGB(150, 0, 0), function()
+    ScreenGui:Destroy()
+end)
+
+print("Delta X - ZB Helper Loaded!")
