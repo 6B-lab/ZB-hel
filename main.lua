@@ -1,21 +1,22 @@
--- [[ ZB PREMIUM V15 - FIXED UI LAYOUT & DISTANCE ]] --
+-- [[ ZB PREMIUM V16 - NO OVERLAP FIX ]] --
 local player = game.Players.LocalPlayer
 local workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 
 -- ลบ UI เก่า
-if CoreGui:FindFirstChild("ZB_Ultimate_V15") then
-    CoreGui.ZB_Ultimate_V15:Destroy()
+if CoreGui:FindFirstChild("ZB_Ultimate_V16") then
+    CoreGui.ZB_Ultimate_V16:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name = "ZB_Ultimate_V15"
+ScreenGui.Name = "ZB_Ultimate_V16"
 ScreenGui.ResetOnSpawn = false
 
 -- ค่าเริ่มต้น
 _G.AutoGreen = false
 _G.AutoKill = false
-_G.Distance = 100 -- เพิ่มระยะเริ่มต้นให้กว้างขึ้น
+_G.Distance = 100
+_G.Buffs = false
 
 -- [[ 1. หน้าต่างหลัก ]] --
 local Main = Instance.new("Frame", ScreenGui)
@@ -25,9 +26,7 @@ Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Active = true
 Main.Draggable = true
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
-local Stroke = Instance.new("UIStroke", Main)
-Stroke.Color = Color3.fromRGB(0, 255, 150)
-Stroke.Thickness = 2
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 150)
 
 -- Header
 local Header = Instance.new("Frame", Main)
@@ -36,18 +35,17 @@ Header.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Instance.new("UICorner", Header)
 
 local Title = Instance.new("TextLabel", Header)
-Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Size = UDim2.new(1, -10, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
-Title.Text = "ZB HUB V15 (FIXED)"
+Title.Text = "ZB HUB V16"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- ปุ่มพับหน้าต่าง
+-- Minimize System (Circle)
 local CircleIcon = Instance.new("TextButton", ScreenGui)
 CircleIcon.Size = UDim2.new(0, 45, 0, 45)
-CircleIcon.Position = UDim2.new(0, 20, 0, 20)
 CircleIcon.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 CircleIcon.Text = "ZB"
 CircleIcon.TextColor3 = Color3.fromRGB(0, 255, 150)
@@ -65,22 +63,24 @@ MiniBtn.TextColor3 = Color3.new(1,1,1)
 MiniBtn.MouseButton1Click:Connect(function() Main.Visible = false CircleIcon.Visible = true end)
 CircleIcon.MouseButton1Click:Connect(function() Main.Visible = true CircleIcon.Visible = false end)
 
--- [[ 2. ตัวจัดระเบียบปุ่ม (ป้องกัน UI บีบกัน) ]] --
+-- [[ 2. ตัวจัดระเบียบปุ่ม (Scroll & List) ]] --
 local Scroll = Instance.new("ScrollingFrame", Main)
 Scroll.Size = UDim2.new(1, -10, 1, -50)
 Scroll.Position = UDim2.new(0, 5, 0, 45)
 Scroll.BackgroundTransparency = 1
-Scroll.CanvasSize = UDim2.new(0, 0, 0, 400) -- เลื่อนขึ้นลงได้ถ้าปุ่มเยอะ
 Scroll.ScrollBarThickness = 2
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y -- ขยายขนาดอัตโนมัติตามปุ่ม
 
 local Layout = Instance.new("UIListLayout", Scroll)
-Layout.Padding = UDim.new(0, 10) -- เว้นระยะห่างแต่ละปุ่ม 10 pixel
+Layout.Padding = UDim.new(0, 8)
 Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Layout.SortOrder = Enum.SortOrder.LayoutOrder -- เรียงตามลำดับการสร้าง
 
--- [[ 3. ฟังก์ชัน Slider ]] --
+-- [[ 3. ฟังก์ชันสร้าง Slider (แบบไม่ทับกัน) ]] --
 local function AddSlider(text, min, max, default, callback)
     local SliderFrame = Instance.new("Frame", Scroll)
-    SliderFrame.Size = UDim2.new(0.9, 0, 0, 45)
+    SliderFrame.Size = UDim2.new(0.9, 0, 0, 50) -- กำหนดขนาดแน่นอน
     SliderFrame.BackgroundTransparency = 1
 
     local Label = Instance.new("TextLabel", SliderFrame)
@@ -92,7 +92,7 @@ local function AddSlider(text, min, max, default, callback)
 
     local Bar = Instance.new("TextButton", SliderFrame)
     Bar.Size = UDim2.new(1, 0, 0, 6)
-    Bar.Position = UDim2.new(0, 0, 0, 25)
+    Bar.Position = UDim2.new(0, 0, 0, 30) -- เว้นจากตัวหนังสือ
     Bar.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     Bar.Text = ""
     Instance.new("UICorner", Bar)
@@ -105,24 +105,24 @@ local function AddSlider(text, min, max, default, callback)
     Bar.MouseButton1Down:Connect(function()
         local moveConn
         moveConn = game:GetService("RunService").RenderStepped:Connect(function()
-            local mousePos = UIS:GetMouseLocation().X
+            local mousePos = game:GetService("UserInputService"):GetMouseLocation().X
             local percent = math.clamp((mousePos - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
             Fill.Size = UDim2.new(percent, 0, 1, 0)
             local val = math.floor(min + (max - min) * percent)
             Label.Text = text .. ": " .. val
             callback(val)
         end)
-        UIS.InputEnded:Connect(function(input)
+        game:GetService("UserInputService").InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then moveConn:Disconnect() end
         end)
     end)
 end
 
--- [[ 4. ฟังก์ชัน Toggle ]] --
+-- [[ 4. ฟังก์ชันสร้างปุ่ม Toggle (แบบไม่ทับกัน) ]] --
 local function AddToggle(text, callback)
     local state = false
     local btn = Instance.new("TextButton", Scroll)
-    btn.Size = UDim2.new(0.9, 0, 0, 38)
+    btn.Size = UDim2.new(0.9, 0, 0, 40) -- กำหนดความสูงแน่นอน
     btn.Text = text .. " : OFF"
     btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.TextColor3 = Color3.new(1, 1, 1)
@@ -137,11 +137,11 @@ local function AddToggle(text, callback)
     end)
 end
 
--- [[ เริ่มสร้างปุ่ม ]] --
+--- [[ ลำดับการสร้างปุ่ม (จะเรียงจากบนลงล่าง) ]] ---
 
-AddSlider("SCAN DISTANCE", 10, 500, 100, function(v) _G.Distance = v end)
+AddSlider("DISTANCE (ระยะการทำงาน)", 10, 500, 100, function(v) _G.Distance = v end)
 
-AddToggle("AUTO ACCEPT GREEN", function(s)
+AddToggle("AUTO CLICK GREEN", function(s)
     _G.AutoGreen = s
     task.spawn(function()
         while _G.AutoGreen do
@@ -149,9 +149,10 @@ AddToggle("AUTO ACCEPT GREEN", function(s)
                 for _, v in pairs(workspace:GetDescendants()) do
                     if v:IsA("ClickDetector") then
                         local p = v.Parent
-                        if p:IsA("BasePart") then
-                            local dist = (player.Character.HumanoidRootPart.Position - p.Position).Magnitude
-                            if dist < _G.Distance then fireclickdetector(v) end
+                        if (p.Color.g > p.Color.r and p.Color.g > 0.4) or p.Name:lower():find("green") then
+                            if (player.Character.HumanoidRootPart.Position - p.Position).Magnitude < _G.Distance then
+                                fireclickdetector(v)
+                            end
                         end
                     end
                 end
@@ -161,7 +162,7 @@ AddToggle("AUTO ACCEPT GREEN", function(s)
     end)
 end)
 
-AddToggle("AUTO KILL ALL (DISTANCE)", function(s)
+AddToggle("AUTO KILL ZOMBIE", function(s)
     _G.AutoKill = s
     task.spawn(function()
         while _G.AutoKill do
@@ -184,7 +185,7 @@ AddToggle("BUFF SPEED & JUMP", function(s)
     _G.Buffs = s
 end)
 
--- Loop ระบบวิ่ง/กระโดด
+-- Loop ระบบบัฟ
 game:GetService("RunService").Heartbeat:Connect(function()
     if _G.Buffs and player.Character and player.Character:FindFirstChild("Humanoid") then
         player.Character.Humanoid.WalkSpeed = 60
@@ -192,4 +193,4 @@ game:GetService("RunService").Heartbeat:Connect(function()
     end
 end)
 
-print("ZB V15 Loaded - UI Layout Fixed!")
+print("ZB V16 Loaded - Overlap Issues Resolved!")
