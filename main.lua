@@ -1,117 +1,132 @@
--- [[ ZB PREMIUM V12 - MINIMIZE SYSTEM & FIXED SCAN ]] --
+-- [[ ZB PREMIUM V14 - THE REAL FIX (SLIDER & SCANNER) ]] --
 local player = game.Players.LocalPlayer
 local workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 
 -- ลบ UI เก่า
-if CoreGui:FindFirstChild("ZB_Minimized_Hub") then
-    CoreGui.ZB_Minimized_Hub:Destroy()
+if CoreGui:FindFirstChild("ZB_Ultimate_V14") then
+    CoreGui.ZB_Ultimate_V14:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name = "ZB_Minimized_Hub"
+ScreenGui.Name = "ZB_Ultimate_V14"
+ScreenGui.ResetOnSpawn = false
 
--- ตัวแปรสถานะ
-local isMinimized = false
+-- ค่าเริ่มต้น (Settings)
+_G.AutoGreen = false
+_G.AutoKill = false
+_G.Distance = 50 -- ระยะเริ่มต้น
+_G.Speed = 16
+_G.Jump = 50
 
--- สร้างหน้าต่างหลัก
+-- [[ UI Main Menu ]] --
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 200, 0, 310)
-Main.Position = UDim2.new(0.05, 0, 0.3, 0)
+Main.Size = UDim2.new(0, 220, 0, 380)
+Main.Position = UDim2.new(0.1, 0, 0.2, 0)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Active = true
 Main.Draggable = true
-Main.ClipsDescendants = true -- สำคัญสำหรับการพับ
-local MainCorner = Instance.new("UICorner", Main)
-MainCorner.CornerRadius = UDim.new(0, 10)
-local MainStroke = Instance.new("UIStroke", Main)
-MainStroke.Color = Color3.fromRGB(0, 255, 150)
-MainStroke.Thickness = 2
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Color = Color3.fromRGB(0, 255, 150)
+Stroke.Thickness = 2
 
--- ส่วนหัว (Header)
+-- Header & Minimize Logic
 local Header = Instance.new("Frame", Main)
 Header.Size = UDim2.new(1, 0, 0, 40)
-Header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-local HeaderCorner = Instance.new("UICorner", Header)
+Header.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Instance.new("UICorner", Header)
 
 local Title = Instance.new("TextLabel", Header)
-Title.Size = UDim2.new(1, -70, 1, 0)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.Text = "ZB HUB V12"
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.Text = "ZB HUB V14 (PRO)"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
-Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- ปุ่มพับหน้าต่าง (Minimize Button)
+-- Minimize Icon
+local CircleIcon = Instance.new("TextButton", ScreenGui)
+CircleIcon.Size = UDim2.new(0, 45, 0, 45)
+CircleIcon.Position = UDim2.new(0, 20, 0, 20)
+CircleIcon.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+CircleIcon.Text = "ZB"
+CircleIcon.TextColor3 = Color3.fromRGB(0, 255, 150)
+CircleIcon.Visible = false
+CircleIcon.Draggable = true
+Instance.new("UICorner", CircleIcon).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", CircleIcon).Color = Color3.fromRGB(0, 255, 150)
+
 local MiniBtn = Instance.new("TextButton", Header)
 MiniBtn.Size = UDim2.new(0, 30, 0, 30)
-MiniBtn.Position = UDim2.new(1, -65, 0, 5)
+MiniBtn.Position = UDim2.new(1, -35, 0, 5)
 MiniBtn.Text = "-"
-MiniBtn.TextColor3 = Color3.new(1, 1, 1)
-MiniBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-MiniBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", MiniBtn).CornerRadius = UDim.new(0, 6)
+MiniBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MiniBtn.TextColor3 = Color3.new(1,1,1)
+MiniBtn.MouseButton1Click:Connect(function() Main.Visible = false CircleIcon.Visible = true end)
+CircleIcon.MouseButton1Click:Connect(function() Main.Visible = true CircleIcon.Visible = false end)
 
--- ปุ่มปิด (Close Button)
-local CloseBtn = Instance.new("TextButton", Header)
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.new(1, 1, 1)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+-- [[ ส่วนของ Slider ปรับระยะ ]] --
+local function AddSlider(text, min, max, default, callback)
+    local Label = Instance.new("TextLabel", Main)
+    Label.Size = UDim2.new(0.9, 0, 0, 20)
+    Label.Position = UDim2.new(0.05, 0, 0, 50 + (#Main:GetChildren() * 25))
+    Label.Text = text .. ": " .. default
+    Label.TextColor3 = Color3.new(1, 1, 1)
+    Label.BackgroundTransparency = 1
+    Label.Font = Enum.Font.Gotham
 
--- พื้นที่เก็บปุ่ม (Content)
-local ContentFrame = Instance.new("Frame", Main)
-ContentFrame.Size = UDim2.new(1, 0, 1, -40)
-ContentFrame.Position = UDim2.new(0, 0, 0, 40)
-ContentFrame.BackgroundTransparency = 1
+    local SliderFrame = Instance.new("TextButton", Main)
+    SliderFrame.Size = UDim2.new(0.9, 0, 0, 5)
+    SliderFrame.Position = UDim2.new(0.05, 0, 0, Label.Position.Y.Offset + 22)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    SliderFrame.Text = ""
 
-local UIList = Instance.new("UIListLayout", ContentFrame)
-UIList.Padding = UDim.new(0, 5)
-UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    local SliderBar = Instance.new("Frame", SliderFrame)
+    SliderBar.Size = UDim2.new((default-min)/(max-min), 0, 1, 0)
+    SliderBar.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
 
--- [[ ระบบการพับหน้าต่าง ]] --
-MiniBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    if isMinimized then
-        Main:TweenSize(UDim2.new(0, 200, 0, 40), "Out", "Quart", 0.3, true)
-        MiniBtn.Text = "+"
-    else
-        Main:TweenSize(UDim2.new(0, 200, 0, 310), "Out", "Quart", 0.3, true)
-        MiniBtn.Text = "-"
-    end
-end)
+    SliderFrame.MouseButton1Down:Connect(function()
+        local moveConn
+        moveConn = game:GetService("RunService").RenderStepped:Connect(function()
+            local mousePos = game:GetService("UserInputService"):GetMouseLocation().X
+            local framePos = SliderFrame.AbsolutePosition.X
+            local frameSize = SliderFrame.AbsoluteSize.X
+            local percent = math.clamp((mousePos - framePos) / frameSize, 0, 1)
+            SliderBar.Size = UDim2.new(percent, 0, 1, 0)
+            local val = math.floor(min + (max - min) * percent)
+            Label.Text = text .. ": " .. val
+            callback(val)
+        end)
+        game:GetService("UserInputService").InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then moveConn:Disconnect() end
+        end)
+    end)
+end
 
-CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-
--- ฟังก์ชันปุ่ม Toggle
+-- [[ ใส่ปุ่ม Toggle ]] --
 local function AddToggle(text, callback)
     local state = false
-    local btn = Instance.new("TextButton", ContentFrame)
-    btn.Size = UDim2.new(0.9, 0, 0, 38)
+    local btn = Instance.new("TextButton", Main)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Position = UDim2.new(0.05, 0, 0, 120 + (#Main:GetChildren() * 10))
     btn.Text = text .. " : OFF"
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 12
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", btn)
 
     btn.MouseButton1Click:Connect(function()
         state = not state
         btn.Text = text .. (state and " : ON ✅" or " : OFF")
-        btn.BackgroundColor3 = state and Color3.fromRGB(0, 120, 70) or Color3.fromRGB(40, 40, 40)
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 80) or Color3.fromRGB(30, 30, 30)
         callback(state)
     end)
 end
 
---- [[ ฟังก์ชันการทำงานต่างๆ ]] ---
+-- 1. Slider ปรับระยะการทำงาน
+AddSlider("SCAN DISTANCE", 10, 500, 50, function(v) _G.Distance = v end)
 
--- 1. Auto Green Fixed
-_G.AutoGreen = false
-AddToggle("AUTO ACCEPT GREEN", function(s)
+-- 2. Auto Green (The Real Fix)
+AddToggle("AUTO ACCEPT (EVERYWHERE)", function(s)
     _G.AutoGreen = s
     task.spawn(function()
         while _G.AutoGreen do
@@ -119,8 +134,9 @@ AddToggle("AUTO ACCEPT GREEN", function(s)
                 for _, v in pairs(workspace:GetDescendants()) do
                     if v:IsA("ClickDetector") then
                         local p = v.Parent
-                        if (p.Color.g > p.Color.r and p.Color.g > 0.4) or p.Name:lower():find("green") then
-                            if (player.Character.HumanoidRootPart.Position - p.Position).Magnitude < 25 then
+                        if p:IsA("BasePart") then
+                            local dist = (player.Character.HumanoidRootPart.Position - p.Position).Magnitude
+                            if dist < _G.Distance then
                                 fireclickdetector(v)
                             end
                         end
@@ -132,8 +148,7 @@ AddToggle("AUTO ACCEPT GREEN", function(s)
     end)
 end)
 
--- 2. Zombie Scanner (Fixed)
-_G.AutoKill = false
+-- 3. Zombie Kill (The Real Fix)
 AddToggle("AUTO KILL ZOMBIE", function(s)
     _G.AutoKill = s
     task.spawn(function()
@@ -142,59 +157,30 @@ AddToggle("AUTO KILL ZOMBIE", function(s)
                 for _, v in pairs(workspace:GetChildren()) do
                     if v:IsA("Model") and v:FindFirstChild("Humanoid") and v ~= player.Character then
                         local root = v:FindFirstChild("HumanoidRootPart")
-                        if root and (player.Character.HumanoidRootPart.Position - root.Position).Magnitude < 40 then
-                            v.Humanoid.Health = 0
+                        if root then
+                            local dist = (player.Character.HumanoidRootPart.Position - root.Position).Magnitude
+                            if dist < _G.Distance then
+                                v.Humanoid.Health = 0 -- ฆ่าทันที
+                            end
                         end
                     end
                 end
             end)
-            task.wait(0.4)
+            task.wait(0.3)
         end
     end)
 end)
 
--- 3. ESP
-AddToggle("PLAYER ESP", function(s)
-    _G.ESP = s
-    if not s then
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p.Character and p.Character:FindFirstChild("HighV12") then p.Character.HighV12:Destroy() end
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        if _G.ESP then
-            pcall(function()
-                for _, p in pairs(game.Players:GetPlayers()) do
-                    if p ~= player and p.Character and not p.Character:FindFirstChild("HighV12") then
-                        local h = Instance.new("Highlight", p.Character)
-                        h.Name = "HighV12"
-                        h.FillColor = Color3.fromRGB(0, 255, 150)
-                    end
-                end
-            end)
-        end
-        task.wait(2)
-    end
-end)
-
--- 4. Speed & Inf Jump
-AddToggle("SPEED & INF JUMP", function(s)
+-- 4. Speed & Jump (Fixed)
+AddToggle("BUFF SPEED & JUMP", function(s)
     _G.Buffs = s
 end)
 
 game:GetService("RunService").Heartbeat:Connect(function()
     if _G.Buffs and player.Character and player.Character:FindFirstChild("Humanoid") then
         player.Character.Humanoid.WalkSpeed = 60
+        player.Character.Humanoid.JumpPower = 100
     end
 end)
 
-game:GetService("UserInputService").JumpRequest:Connect(function()
-    if _G.Buffs and player.Character and player.Character:FindFirstChild("Humanoid") then
-        player.Character.Humanoid:ChangeState("Jumping")
-    end
-end)
-
-print("ZB V12 Minimize UI Loaded!")
+print("ZB V14 Loaded - Adjust Slider to use Auto Functions!")
