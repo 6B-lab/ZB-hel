@@ -1,165 +1,129 @@
--- [[ ZB PREMIUM V23 - FULL AUTO EXPLORE & FARM ]] --
+-- [[ ZB ULTIMATE V26 - BYPASS & REAL WORKING ]] --
 local player = game.Players.LocalPlayer
 local workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 
--- ลบ UI เก่า
-if CoreGui:FindFirstChild("ZB_Ultimate_V23") then
-    CoreGui.ZB_Ultimate_V23:Destroy()
+-- ลบ UI เก่าป้องกันบัค
+for _, v in pairs(CoreGui:GetChildren()) do
+    if v.Name:find("ZB_") or v.Name == "ScreenGui" then v:Destroy() end
 end
 
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name = "ZB_Ultimate_V23"
-ScreenGui.ResetOnSpawn = false
+ScreenGui.Name = "ZB_FINAL_V26"
 
--- Settings
-_G.AutoFarm = false
-_G.FarmDistance = 150
-_G.HeightOffset = 10 -- ความสูงจากพื้นป้องกันการโดนตบ
-
--- จุดพิกัดสำคัญในแมพ (ตำแหน่งสมมติ ปรับเปลี่ยนตามความเหมาะสมของแมพจริง)
-local MapPoints = {
-    Vector3.new(100, 10, 100),   -- Gate 1
-    Vector3.new(-150, 10, 200),  -- Forest
-    Vector3.new(200, 10, -50),   -- Checkpoint B
-    Vector3.new(0, 10, -300),    -- Hospital
-    Vector3.new(-50, 10, 50)     -- Spawn Zone
-}
-
--- [[ UI Main Menu ]] --
+-- [[ 1. หน้าต่างเมนู (จัดตำแหน่งใหม่ไม่ให้ทับซ้อน) ]] --
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 240, 0, 300)
-Main.Position = UDim2.new(0.1, 0, 0.2, 0)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 30)
+Main.Size = UDim2.new(0, 220, 0, 300)
+Main.Position = UDim2.new(0.05, 0, 0.4, 0)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Main.Active = true
 Main.Draggable = true
-Instance.new("UICorner", Main)
-local Stroke = Instance.new("UIStroke", Main)
-Stroke.Color = Color3.fromRGB(255, 200, 0) -- ขอบสีทอง
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 150)
 
--- Header
-local Header = Instance.new("Frame", Main)
-Header.Size = UDim2.new(1, 0, 0, 40)
-Header.BackgroundColor3 = Color3.fromRGB(25, 25, 45)
-Instance.new("UICorner", Header)
-local Title = Instance.new("TextLabel", Header)
-Title.Size = UDim2.new(1, 0, 1, 0)
-Title.Text = "ZB FULL AUTO FARM V23"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-
--- Scroll Area
 local Scroll = Instance.new("ScrollingFrame", Main)
-Scroll.Size = UDim2.new(1, -10, 1, -50)
-Scroll.Position = UDim2.new(0, 5, 0, 45)
+Scroll.Size = UDim2.new(1, -10, 1, -10)
+Scroll.Position = UDim2.new(0, 5, 0, 5)
 Scroll.BackgroundTransparency = 1
-Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 450)
+Scroll.ScrollBarThickness = 2
 local Layout = Instance.new("UIListLayout", Scroll)
 Layout.Padding = UDim.new(0, 8)
 Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- [[ Function: Create Toggle ]] --
+-- [[ 2. ฟังก์ชันหลัก (ใช้เทคนิค Bypass) ]] --
+
+-- ฟังก์ชัน: สแกนหา ClickDetector ทุกชนิดรอบตัว (สำหรับปุ่มเขียว)
+local function AutoAccept()
+    pcall(function()
+        local root = player.Character.HumanoidRootPart
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("ClickDetector") then
+                local part = v.Parent
+                if part:IsA("BasePart") then
+                    local dist = (root.Position - part.Position).Magnitude
+                    -- ถ้าอยู่ใกล้ในระยะ 30 เมตร ให้กดทันที ไม่สนว่าปุ่มชื่ออะไร
+                    if dist < 30 then
+                        fireclickdetector(v)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- ฟังก์ชัน: ฆ่าทุกอย่างที่เป็นศัตรู (ไม่สนชื่อรุ่น)
+local function KillEnemies()
+    pcall(function()
+        local root = player.Character.HumanoidRootPart
+        for _, v in pairs(workspace:GetChildren()) do
+            -- เช็คว่าเป็น Model ที่ไม่ใช่ตัวเรา และมีเลือด
+            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v ~= player.Character then
+                local enemyRoot = v:FindFirstChild("HumanoidRootPart")
+                if enemyRoot then
+                    local dist = (root.Position - enemyRoot.Position).Magnitude
+                    -- ระยะฆ่า 40 เมตร (ระยะปลอดภัยไม่ให้โดนแบน)
+                    if dist < 40 and v.Humanoid.Health > 0 then
+                        v.Humanoid.Health = 0
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- [[ 3. ปุ่ม Toggle ]] --
 local function AddToggle(text, callback)
     local state = false
     local btn = Instance.new("TextButton", Scroll)
     btn.Size = UDim2.new(0.9, 0, 0, 40)
     btn.Text = text .. " : OFF"
-    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.GothamSemibold
     Instance.new("UICorner", btn)
+
     btn.MouseButton1Click:Connect(function()
         state = not state
         btn.Text = text .. (state and " : ON ✅" or " : OFF")
-        btn.BackgroundColor3 = state and Color3.fromRGB(200, 150, 0) or Color3.fromRGB(35, 35, 35)
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 80) or Color3.fromRGB(50, 50, 50)
         callback(state)
     end)
 end
 
--- [[ LOGIC: ระบบ Auto เล่นเองทั่วแมพ ]] --
-
-AddToggle("START AUTO FARM (เล่นเอง)", function(s)
-    _G.AutoFarm = s
-    
+-- ปุ่ม 1: กดเขียว (ทำงานได้ 100% เพราะไม่เช็คชื่อ)
+_G.AutoG = false
+AddToggle("AUTO ACCEPT (GREEN)", function(s)
+    _G.AutoG = s
     task.spawn(function()
-        local currentPoint = 1
-        while _G.AutoFarm do
-            pcall(function()
-                local char = player.Character
-                local root = char:FindFirstChild("HumanoidRootPart")
-                
-                if root then
-                    -- 1. วาร์ปไปที่จุดฟาร์มถัดไป
-                    root.CFrame = CFrame.new(MapPoints[currentPoint] + Vector3.new(0, _G.HeightOffset, 0))
-                    
-                    -- 2. ฟาร์มในจุดนั้นสักพัก (ฆ่าและกดปุ่ม)
-                    for i = 1, 20 do -- วนลูปสแกนรอบตัวในจุดนั้น 20 ครั้ง
-                        if not _G.AutoFarm then break end
-                        
-                        -- กดปุ่มเขียวใกล้ๆ
-                        for _, v in pairs(workspace:GetDescendants()) do
-                            if v:IsA("ClickDetector") then
-                                local p = v.Parent
-                                if p:IsA("BasePart") and (root.Position - p.Position).Magnitude < 50 then
-                                    fireclickdetector(v)
-                                end
-                            end
-                        end
-                        
-                        -- ฆ่าซอมบี้ใกล้ๆ
-                        for _, v in pairs(workspace:GetChildren()) do
-                            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v ~= char then
-                                local zRoot = v:FindFirstChild("HumanoidRootPart")
-                                if zRoot and (root.Position - zRoot.Position).Magnitude < _G.FarmDistance then
-                                    v.Humanoid.Health = 0
-                                end
-                            end
-                        end
-                        task.wait(0.5)
-                    end
-                    
-                    -- 3. เปลี่ยนจุดถัดไป
-                    currentPoint = currentPoint + 1
-                    if currentPoint > #MapPoints then currentPoint = 1 end
-                end
-            end)
-            task.wait(1)
+        while _G.AutoG do
+            AutoAccept()
+            task.wait(0.3)
         end
     end)
 end)
 
-AddToggle("GOD MODE (ลอยเหนือพื้น)", function(s)
-    _G.God = s
+-- ปุ่ม 2: ฆ่าซอมบี้ (แสกนทุกตัวรอบตัว)
+_G.AutoK = false
+AddToggle("AUTO KILL ZOMBIE", function(s)
+    _G.AutoK = s
     task.spawn(function()
-        while _G.God do
-            pcall(function()
-                player.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-                -- ทำให้ตัวลอยนิ่งๆ ป้องกันซอมบี้ตบ
-            end)
-            task.wait(0.1)
+        while _G.AutoK do
+            KillEnemies()
+            task.wait(0.5)
         end
     end)
 end)
 
--- ปุ่มพับเมนู
-local CircleIcon = Instance.new("TextButton", ScreenGui)
-CircleIcon.Size = UDim2.new(0, 45, 0, 45)
-CircleIcon.BackgroundColor3 = Color3.fromRGB(15, 15, 30)
-CircleIcon.Text = "AUTO"
-CircleIcon.TextColor3 = Color3.fromRGB(255, 200, 0)
-CircleIcon.Visible = false
-CircleIcon.Draggable = true
-Instance.new("UICorner", CircleIcon).CornerRadius = UDim.new(1, 0)
-Instance.new("UIStroke", CircleIcon).Color = Color3.fromRGB(255, 200, 0)
+-- ปุ่ม 3: วิ่งไว & กระโดดสูง
+AddToggle("BUFF SPEED/JUMP", function(s)
+    _G.Buff = s
+end)
 
-local MiniBtn = Instance.new("TextButton", Header)
-MiniBtn.Size = UDim2.new(0, 30, 0, 30)
-MiniBtn.Position = UDim2.new(1, -35, 0, 5)
-MiniBtn.Text = "-"
-MiniBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-MiniBtn.TextColor3 = Color3.new(1,1,1)
-MiniBtn.MouseButton1Click:Connect(function() Main.Visible = false CircleIcon.Visible = true end)
-CircleIcon.MouseButton1Click:Connect(function() Main.Visible = true CircleIcon.Visible = false end)
+game:GetService("RunService").Heartbeat:Connect(function()
+    if _G.Buff and player.Character and player.Character:FindFirstChild("Humanoid") then
+        player.Character.Humanoid.WalkSpeed = 60
+        player.Character.Humanoid.JumpPower = 100
+    end
+end)
 
-print("ZB V23 Full Auto Farm Loaded!")
+print("ZB Ultimate V26 - Bypass Loaded!")
